@@ -82,6 +82,8 @@ def insert_image(img):
     
     # Check for duplicates
     if is_duplicate(features):
+        os.remove(img_path)
+        os.remove(img_path.replace(".jpg", "_cropped.jpg"))
         return "Duplicate image detected. Upload a different image."
     
     # Store the features in the database
@@ -143,13 +145,14 @@ tab1, tab2, tab3 = st.tabs(["Insert Image", "Search Image", "Clear Cache"])
 
 with tab1:
     st.header("Insert Image")
-    uploaded_image = st.file_uploader("Upload an image to insert into the database.", type=["jpg", "jpeg", "png"])
-    if st.button("Insert"):
-        if uploaded_image is not None:
-            image = Image.open(uploaded_image)
-            st.image(image, caption='Uploaded Image', use_column_width=True)
-            result = insert_image(image)
-            st.write(result)
+    uploaded_images = st.file_uploader("Upload images to insert into the database.", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+    if st.button("Insert"):            
+        if uploaded_images is not None:
+            for uploaded_image in uploaded_images:
+                image = Image.open(uploaded_image)
+                st.image(image, caption=f'Uploaded Image: {uploaded_image.name}', use_column_width=True)
+                result = insert_image(image)
+                st.write(result)
 
 with tab2:
     st.header("Search Image")
