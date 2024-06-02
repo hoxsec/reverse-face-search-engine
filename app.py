@@ -56,7 +56,8 @@ def is_duplicate(new_features, threshold=0.5, top_k=10):
     # Get the top_k similar images
     top_matches = search_similar_images(new_features, top_k=top_k)
     
-    for dist in top_matches:
+    for dist, img_path, features_blob in top_matches:
+        existing_features = np.frombuffer(features_blob, dtype=np.float32)
         if dist < threshold:
             return True
     
