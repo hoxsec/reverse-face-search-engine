@@ -8,6 +8,7 @@ import numpy as np
 from tensorflow.keras.applications.inception_resnet_v2 import InceptionResNetV2, preprocess_input
 from tensorflow.keras.preprocessing import image as keras_image
 from database import store_features, create_table, get_all_features, clear_database
+from search import search_similar_images  # Importing the search function
 
 # Ensure the images directories exist
 inserted_images_dir = 'images/inserted'
@@ -51,22 +52,16 @@ def extract_features(img_path):
     features = model.predict(img_data)
     return features
 
-def search_similar_images(query_features, top_k=10):
-    rows = get_all_features()
+def is_duplicate(new_features, threshold=0.5, top_k=10):
+    # Get the top_k similar images
+    top_matches = search_similar_images(new_features, top_k=top_k)
     
-    distances = []
+    for dist, img_path, features_blob in top_matches:
+        existing_features = np.frombuffer(features_blob, dtype=np.float32)
+        if dist < threshold:
+            return True
     
-    for row in rows:
-        img_path, features_blob = row
-        features = np.frombuffer(features_blob, dtype=np.float32)
-        dist = np.linalg.norm(query_features - features)
-        distances.append((dist, img_path))
-    
-    # Sort by distance and take the top_k results
-    distances.sort(key=lambda x: x[0])
-    top_matches = distances[:top_k]
-    
-    return [match[1] for match in top_matches]
+    return False
 
 def insert_image(img):
     if img is None:
@@ -84,6 +79,10 @@ def insert_image(img):
     
     if features is None:
         return "No face detected in the uploaded image"
+    
+    # Check for duplicates
+    if is_duplicate(features):
+        return "Duplicate image detected. Upload a different image."
     
     # Store the features in the database
     store_features(img_path, features)
@@ -114,7 +113,7 @@ def process_image(img):
         return "No matching images found"
     
     # Load the top match images
-    top_match_images = [Image.open(match) for match in top_matches]
+    top_match_images = [Image.open(match[1]) for match in top_matches]
     
     return top_match_images
 
